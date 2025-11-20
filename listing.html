@@ -1,0 +1,96 @@
+<!doctype html> <html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <title>Smart Listing</title> <link rel="preconnect" href="https://cdnjs.cloudflare.com"> <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script> <style> body{background:#f5f7fa;margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;color:#111} #smart-listing{max-width:1080px;margin:0 auto;padding:18px;border:1px solid #e6ebf2;border-radius:10px;background:#fff} #s-hero img{width:100%;height:auto;border-radius:8px} #s-gallery img{width:100%;height:auto;border-radius:6px;margin:6px 0} h1{margin:0 0 8px 0;color:#050C1E} h3{margin:14px 0 8px 0;color:#050C1E} .btn{display:inline-block;background:#050C1E;color:#fff;text-decoration:none;padding:12px 16px;border-radius:6px;font-weight:700} </style> </head> <body> <div id="smart-listing"> <h1 id="s-title"></h1> <p id="s-sub"></p> <div id="s-hero"></div> <p id="s-facts"></p> <p id="s-summary"></p> <div id="s-cta"></div> <div id="s-pdfbtn"></div> <div id="s-gallery"></div> <div id="s-upgrades"></div> <div id="s-neighborhood"></div> <div id="s-agent"></div> <p>Equal Housing Opportunity. Information deemed reliable but not guaranteed; buyer to verify.</p> </div>
+<script> (function(){ function esc(s){return String(s||'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');} function fmtPrice(v){var n=String(v||'').replace(/[^\d]/g,'');return n?('$'+Number(n).toLocaleString()):(v||'');} function splitClean(t){return (t||'').split(/\r?\n|;|•|,(?=\s)/g).map(function(s){return s.trim().replace(/^[-•–]\s*/,'');}).filter(function(s,i,a){return s&&a.indexOf(s)===i;}).slice(0,12);}
+var q=new URLSearchParams(location.search), get=function(k){return (q.get(k)||'').trim();};
+
+// Inputs
+var address=get('address'), city=get('city'), state=get('state'), zip=get('zip');
+var market=get('market'), beds=get('beds'), baths=get('baths'), sqft=get('sqft'), price=get('price');
+var summary=get('summary'), hero=get('hero');
+var g=[get('g1'),get('g2'),get('g3'),get('g4')].filter(Boolean);
+var brand=get('brand')||'#050C1E';
+var agent=get('agent'), email=get('email'), phone=get('phone'), brokerage=get('brokerage'), dre=get('dre');
+var ctaText=get('ctatxt')||'Schedule a Private Tour', ctaHref=get('ctahref'), pdfLink=get('pdf');
+
+// Title/Sub
+var el;
+(el=document.getElementById('s-title'))&&(el.textContent=address||'');
+(el=document.getElementById('s-sub'))&&(el.textContent=[city,state,zip].filter(Boolean).join(', ')+(market?(' — '+market):''));
+
+// Hero
+el=document.getElementById('s-hero');
+if(el){el.innerHTML=hero?'<img src="'+hero+'" alt="Photo — '+esc(address||'')+'">':'';}
+
+// Facts
+(el=document.getElementById('s-facts'))&& (function(){
+  var parts=[]; if(beds)parts.push(esc(beds)+' bd'); if(baths)parts.push(esc(baths)+' ba'); if(sqft)parts.push('~'+esc(sqft)+' SF'); if(price)parts.push(fmtPrice(price));
+  el.textContent=parts.join(' • ');
+})();
+
+// Summary
+(el=document.getElementById('s-summary'))&&(el.textContent=summary||'');
+
+// CTA
+el=document.getElementById('s-cta');
+if(el){
+  var valid=/^(mailto:|tel:|https?:\/\/)/i, href=ctaHref, html='';
+  if(href && !valid.test(href)) href='https://'+href;
+  if(href && valid.test(href)){
+    html='<a href="'+href+'" target="'+(/^https?:/.test(href)?'_blank':'')+'" rel="noopener" class="btn">' + esc(ctaText) + '</a>';
+  }
+  if(pdfLink && /^https?:\/\//i.test(pdfLink)){
+    html+=(html?' ':'')+'<a href="'+pdfLink+'" target="_blank" rel="noopener" style="margin-left:8px;color:'+brand+';text-decoration:underline;font-weight:700">'+'Download Brochure (PDF)'+'</a>';
+  }
+  el.innerHTML=html;
+}
+
+// Gallery
+el=document.getElementById('s-gallery');
+if(el){
+  if(g.length){
+    el.innerHTML=g.map(function(u,i){
+      return '<img src="'+u+'" alt="Gallery '+(i+1)+' — '+esc(address||'')+'">';
+    }).join('');
+  } else { el.style.display='none'; }
+}
+
+// Lists
+var upgrades=splitClean(get('upgrades')), neigh=splitClean(get('neigh'));
+el=document.getElementById('s-upgrades');
+if(el){
+  if(upgrades.length){
+    el.innerHTML='<h3>Upgrades</h3><ul style="margin:0 0 12px 18px;padding:0">' + upgrades.map(function(it){return '<li>'+esc(it)+'</li>';}).join('') + '</ul>';
+  } else { el.style.display='none'; }
+}
+el=document.getElementById('s-neighborhood');
+if(el){
+  if(neigh.length){
+    el.innerHTML='<h3>Neighborhood Highlights</h3><ul style="margin:0 0 12px 18px;padding:0">' + neigh.map(function(it){return '<li>'+esc(it)+'</li>';}).join('') + '</ul>';
+  } else { el.style.display='none'; }
+}
+
+// Agent footer
+el=document.getElementById('s-agent');
+if(el){
+  var line1=[agent, brokerage, dre?('DRE '+dre):''].filter(Boolean).map(esc).join(' • ');
+  var line2=[email?('<a href="mailto:'+email+'">' + esc(email) + '</a>'):'', phone?esc(phone):''].filter(Boolean).join(' • ');
+  el.innerHTML=[line1,line2].filter(Boolean).join('<br>');
+}
+
+// PDF button (client-side generate)
+var btnWrap=document.getElementById('s-pdfbtn');
+if(btnWrap && !btnWrap.dataset.init){
+  btnWrap.dataset.init='1';
+  btnWrap.innerHTML='<a id="bb-dl" href="#" class="btn">'+'Download Brochure (PDF)'+'</a>';
+  var dl=document.getElementById('bb-dl');
+  if(dl){
+    dl.addEventListener('click',function(e){
+      e.preventDefault();
+      var opt={margin:10,filename:(String(address||"brochure").replace(/[^\w\s-]/g,"").replace(/\s+/g,"-").toLowerCase())+'-brochure.pdf',image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'letter',orientation:'portrait'}};
+      if(window.html2pdf){ dl.textContent='Generating…'; html2pdf().set(opt).from(document.getElementById('smart-listing')).save().then(function(){ dl.textContent='Download Brochure (PDF)'; }); }
+    });
+    if(q.get('genpdf')==='1'){ setTimeout(function(){ dl.click(); },400); }
+  }
+}
+
+})(); </script> </body> </html>
+
