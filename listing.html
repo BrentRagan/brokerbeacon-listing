@@ -1,5 +1,5 @@
 <!doctype html> <html lang="en"> <head> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1"> <title>Smart Listing</title> <link rel="preconnect" href="https://cdnjs.cloudflare.com"> <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script> <style> :root{--brand:#050C1E} body{background:#f5f7fa;margin:0;padding:20px;font-family:Arial,Helvetica,sans-serif;color:#111} #smart-listing{max-width:1080px;margin:0 auto;padding:18px;border:1px solid #e6ebf2;border-radius:10px;background:#fff} #s-hero img{width:100%;height:auto;border-radius:8px;display:block} #s-gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:10px} #s-gallery img{width:100%;height:auto;border-radius:6px;display:block} h1{margin:0 0 8px 0;color:#050C1E} h3{margin:14px 0 8px 0;color:#050C1E} .btn{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;padding:12px 16px;border-radius:6px;font-weight:700} .muted{color:#64748b} </style> </head> <body> <div id="smart-listing"> <h1 id="s-title"></h1> <p id="s-sub" class="muted"></p> <div id="s-hero"></div> <p id="s-facts"></p> <p id="s-summary"></p> <div id="s-cta" style="margin:10px 0 14px 0"></div> <div id="s-pdfbtn" style="margin:6px 0 16px 0"></div> <div id="s-gallery"></div> <div id="s-upgrades"></div> <div id="s-neighborhood"></div> <div id="s-agent" class="muted" style="margin-top:8px"></div> <p class="muted" style="margin-top:14px"> Equal Housing Opportunity. Information deemed reliable but not guaranteed; buyer to verify. </p> </div>
-<script> (function(){ // Utils function esc(s){return String(s||'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');} function fmtPrice(v){var n=String(v||'').replace(/[^\d]/g,'');return n?('$'+Number(n).toLocaleString()):(v||'');} function splitClean(t){return (t||'').split(/\r?\n|;|•|,(?=\s)/g).map(function(s){return s.trim().replace(/^[-•–]\s*/,'');}).filter(function(s,i,a){return s&&a.indexOf(s)===i;}).slice(0,12);} function withTimeout(promise, ms){ return Promise.race([ promise, new Promise(function(_r, reject){ setTimeout(function(){ reject(new Error('timeout')); }, ms); }) ]); } function hideAllImages(rootEl, hide){ (rootEl.querySelectorAll('img')||[]).forEach(function(img){ if(hide){ img.dataset._disp = img.style.display; img.style.display = 'none'; } else { img.style.display = img.dataset._disp || ''; } }); } function inlineImages(rootEl){ var imgs = Array.from(rootEl.querySelectorAll('img')); return Promise.all(imgs.map(function(img){ try{ var url = img.getAttribute('src'); if(!url || url.indexOf('data:')===0) return Promise.resolve(); return fetch(url, {mode:'cors', credentials:'omit'}) .then(function(resp){ if(!resp.ok) return; return resp.blob(); }) .then(function(blob){ if(!blob) return; return new Promise(function(resolve){ var r=new FileReader(); r.onload=function(){ img.setAttribute('src', r.result); resolve(); }; r.readAsDataURL(blob); }); }) .catch(function(){}); }catch(e){ return Promise.resolve(); } })); }
+<script> (function(){ // Utils function esc(s){return String(s||'').replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>');} function fmtPrice(v){var n=String(v||'').replace(/[^\d]/g,'');return n?('$'+Number(n).toLocaleString()):(v||'');} function splitClean(t){return (t||'').split(/\r?\n|;|•|,(?=\s)/g).map(function(s){return s.trim().replace(/^[-•–]\s*/,'');}).filter(function(s,i,a){return s&&a.indexOf(s)===i;}).slice(0,12);} function withTimeout(promise, ms){return Promise.race([promise,new Promise(function(_r,rej){setTimeout(function(){rej(new Error('timeout'));},ms);})]);} function inlineImages(rootEl){ var imgs=Array.from(rootEl.querySelectorAll('img')); return Promise.all(imgs.map(function(img){ try{ var url=img.getAttribute('src'); if(!url||url.indexOf('data:')===0) return Promise.resolve(); return fetch(url,{mode:'cors',credentials:'omit'}).then(function(r){if(!r.ok) return; return r.blob();}) .then(function(b){if(!b) return; return new Promise(function(res){var fr=new FileReader(); fr.onload=function(){img.setAttribute('src',fr.result);res();}; fr.readAsDataURL(b);});}) .catch(function(){}); }catch(e){return Promise.resolve();} })); } function hideImgs(rootEl,hide){ (rootEl.querySelectorAll('img')||[]).forEach(function(img){ if(hide){img.dataset._d=img.style.display; img.style.display='none';} else {img.style.display=img.dataset._d||'';} }); }
 // Inputs
 var q=new URLSearchParams(location.search), get=function(k){return (q.get(k)||'').trim();};
 var address=get('address'), city=get('city'), state=get('state'), zip=get('zip');
@@ -32,36 +32,27 @@ el=document.getElementById('s-cta');
 if(el){
   var valid=/^(mailto:|tel:|https?:\/\/)/i, href=ctaHref, html='';
   if(href && !valid.test(href)) href='https://'+href;
-  if(href && valid.test(href)){
-    html='<a href="'+href+'" target="'+(/^https?:/.test(href)?'_blank':'')+'" rel="noopener" class="btn">' + esc(ctaText) + '</a>';
-  }
-  if(pdfLink && /^https?:\/\//i.test(pdfLink)){
-    html+=(html?' ':'')+'<a href="'+pdfLink+'" target="_blank" rel="noopener" style="margin-left:8px;color:'+brand+';text-decoration:underline;font-weight:700">'+'Download Brochure (PDF)'+'</a>';
-  }
+  if(href && valid.test(href)){ html='<a href="'+href+'" target="'+(/^https?:/.test(href)?'_blank':'')+'" rel="noopener" class="btn">' + esc(ctaText) + '</a>'; }
+  if(pdfLink && /^https?:\/\//i.test(pdfLink)){ html+=(html?' ':'')+'<a href="'+pdfLink+'" target="_blank" rel="noopener" style="margin-left:8px;color:'+brand+';text-decoration:underline;font-weight:700">'+'Download Brochure (PDF)'+'</a>'; }
   el.innerHTML=html;
 }
 
 el=document.getElementById('s-gallery');
 if(el){
-  if(g.length){
-    el.innerHTML=g.map(function(u,i){
-      return '<img crossorigin="anonymous" src="'+u+'" alt="Gallery '+(i+1)+' — '+esc(address||'')+'">';
-    }).join('');
-  } else { el.style.display='none'; }
+  if(g.length){ el.innerHTML=g.map(function(u,i){return '<img crossorigin="anonymous" src="'+u+'" alt="Gallery '+(i+1)+' — '+esc(address||'')+'">';}).join(''); }
+  else { el.style.display='none'; }
 }
 
 var upgrades=splitClean(get('upgrades')), neigh=splitClean(get('neigh'));
 el=document.getElementById('s-upgrades');
 if(el){
-  if(upgrades.length){
-    el.innerHTML='<h3>Upgrades</h3><ul style="margin:0 0 12px 18px;padding:0">' + upgrades.map(function(it){return '<li>'+esc(it)+'</li>';}).join('') + '</ul>';
-  } else { el.style.display='none'; }
+  if(upgrades.length){ el.innerHTML='<h3>Upgrades</h3><ul style="margin:0 0 12px 18px;padding:0">' + upgrades.map(function(it){return '<li>'+esc(it)+'</li>';}).join('') + '</ul>'; }
+  else { el.style.display='none'; }
 }
 el=document.getElementById('s-neighborhood');
 if(el){
-  if(neigh.length){
-    el.innerHTML='<h3>Neighborhood Highlights</h3><ul style="margin:0 0 12px 18px;padding:0">' + neigh.map(function(it){return '<li>'+esc(it)+'</li>';}).join('') + '</ul>';
-  } else { el.style.display='none'; }
+  if(neigh.length){ el.innerHTML='<h3>Neighborhood Highlights</h3><ul style="margin:0 0 12px 18px;padding:0">' + neigh.map(function(it){return '<li>'+esc(it)+'</li>';}).join('') + '</ul>'; }
+  else { el.style.display='none'; }
 }
 
 el=document.getElementById('s-agent');
@@ -71,52 +62,40 @@ if(el){
   el.innerHTML=[line1,line2].filter(Boolean).join('<br>');
 }
 
-// PDF: inline images -> try with images -> fallback no images, with timeout
-var rootEl = document.getElementById('smart-listing');
-var btnWrap = document.getElementById('s-pdfbtn');
+// PDF: inline images -> try with images -> fallback no images -> final print
+var rootEl=document.getElementById('smart-listing');
+var btnWrap=document.getElementById('s-pdfbtn');
 if(btnWrap && !btnWrap.dataset.init){
   btnWrap.dataset.init='1';
   btnWrap.innerHTML='<a id="bb-dl" href="#" class="btn">'+'Download Brochure (PDF)'+'</a>';
   var dl=document.getElementById('bb-dl');
   if(dl){
-    dl.addEventListener('click', function(e){
-      e.preventDefault();
-      var opt={
-        margin:10,
-        filename:(String((document.getElementById('s-title')||{}).textContent||'brochure').replace(/[^\w\s-]/g,'').replace(/\s+/g,'-').toLowerCase())+'-brochure.pdf',
-        image:{type:'jpeg',quality:0.98},
-        html2canvas:{scale:2,useCORS:true,allowTaint:false,imageTimeout:8000,ignoreElements:function(node){ return node && node.id==='bb-dl'; }},
-        jsPDF:{unit:'mm',format:'letter',orientation:'portrait'}
-      };
-
-      // Step 1: try with images after inlining
-      (function exportWithImages(){
-        dl.textContent='Preparing…';
-        return inlineImages(rootEl).then(function(){
-          dl.textContent='Generating…';
-          if(!window.html2pdf) throw new Error('html2pdf not loaded');
-          return withTimeout(html2pdf().set(opt).from(rootEl).save(), 12000);
-        });
-      })()
-      .then(function(){ dl.textContent='Download Brochure (PDF)'; })
-      .catch(function(){
-        // Step 2: fallback without images
-        try{
-          hideAllImages(rootEl, true);
-          dl.textContent='Generating (no images)…';
-          if(!window.html2pdf) throw new Error('html2pdf not loaded');
-          return withTimeout(html2pdf().set(opt).from(rootEl).save(), 12000)
-            .then(function(){ hideAllImages(rootEl, false); dl.textContent='Download Brochure (PDF)'; })
-            .catch(function(){ hideAllImages(rootEl, false); dl.textContent='Download Brochure (PDF)'; });
-        }catch(_){
-          hideAllImages(rootEl, false);
-          dl.textContent='Download Brochure (PDF)';
-        }
+    function fileName(){
+      var t=(document.getElementById('s-title')||{}).textContent||'brochure';
+      return String(t).trim().replace(/[^\w\s-]/g,'').replace(/\s+/g,'-').toLowerCase()+'-brochure.pdf';
+    }
+    function exportPdf(){
+      var opt={margin:10,filename:fileName(),image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,allowTaint:false,imageTimeout:8000,ignoreElements:function(n){return n && n.id==='bb-dl';}},jsPDF:{unit:'mm',format:'letter',orientation:'portrait'}};
+      dl.textContent='Preparing…';
+      return inlineImages(rootEl).then(function(){
+        dl.textContent='Generating…';
+        if(!window.html2pdf) throw new Error('html2pdf not loaded');
+        return withTimeout(html2pdf().set(opt).from(rootEl).toPdf().get('pdf').then(function(pdf){ pdf.save(fileName()); }),12000);
       });
+    }
+    function exportNoImages(){
+      var opt={margin:10,filename:fileName(),image:{type:'jpeg',quality:0.98},html2canvas:{scale:2,useCORS:true,allowTaint:false,imageTimeout:8000,ignoreElements:function(n){return n && n.id==='bb-dl';}},jsPDF:{unit:'mm',format:'letter',orientation:'portrait'}};
+      hideImgs(rootEl,true);
+      dl.textContent='Generating (no images)…';
+      return withTimeout(html2pdf().set(opt).from(rootEl).toPdf().get('pdf').then(function(pdf){ pdf.save(fileName()); }).finally(function(){hideImgs(rootEl,false);}),12000);
+    }
+    dl.addEventListener('click',function(e){
+      e.preventDefault();
+      exportPdf().then(function(){ dl.textContent='Download Brochure (PDF)'; })
+      .catch(function(){ exportNoImages().then(function(){ dl.textContent='Download Brochure (PDF)'; })
+      .catch(function(){ dl.textContent='Opening print…'; try{ window.print(); }catch(_){ } dl.textContent='Download Brochure (PDF)'; });});
     });
-
-    // Auto-generate support
-    if(q.get('genpdf')==='1'){ setTimeout(function(){ dl.click(); }, 800); }
+    if(q.get('genpdf')==='1'){ setTimeout(function(){ dl.click(); },800); }
   }
 }
 
